@@ -8,11 +8,11 @@ exports.handler = async function (event, context) {
     };
   }
 
-  const { prompt } = JSON.parse(event.body);
-  if (!prompt) {
+  const { prompt, history } = JSON.parse(event.body);
+  if (!prompt || !history) {
     return {
       statusCode: 400,
-      body: JSON.stringify({ error: "Prompt is required" }),
+      body: JSON.stringify({ error: "Prompt and history are required" }),
     };
   }
 
@@ -25,10 +25,7 @@ exports.handler = async function (event, context) {
   try {
     const completion = await openai.createChatCompletion({
       model: "gpt-3.5-turbo",
-      messages: [
-        { role: "system", content: "You are a helpful assistant." },
-        { role: "user", content: prompt },
-      ],
+      messages: history,
     });
 
     return {
