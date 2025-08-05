@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>AI Chat - Powered by OpenAI</title>
+  <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="flex flex-col h-screen bg-[#343541] text-white font-sans">
+    <main id="chat" class="flex-1 overflow-y-auto px-4 py-6 space-y-4"></main>
+    <div class="border-t border-[#555] bg-[#40414f] p-4">
+      <form id="form">
+        <textarea id="prompt" rows="1" placeholder="Send a message..." required class="w-full bg-[#343541] text-white border-none rounded p-3 resize-none focus:outline-none"></textarea>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById('form');
+    const promptInput = document.getElementById('prompt');
+    const chat = document.getElementById('chat');
+
+    let conversation = [
+      { role: "system", content: "You are a helpful assistant." }
+    ];
+
+    function createMessageBubble(role, message) {
+      const bubble = document.createElement('div');
+      bubble.className = `message ${role === 'user' ? 'user' : 'ai'}`;
+      bubble.textContent = message;
+      chat.appendChild(bubble);
+      chat.scrollTop = chat.scrollHeight;
+    }
+
+    promptInput.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        form.dispatchEvent(new Event('submit'));
+      }
+    });
+
+    form.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const userMessage = promptInput.value.trim();
+      if (!userMessage) return;
+
+      createMessageBubble('user', userMessage);
+      conversation.push({ role: 'user', content: userMessage });
+
+      promptInput.value = '';
+
+      const loadingBubble = document.createElement('div');
+      loadingBubble.className = 'message ai';
+      loadingBubble.textContent = 'AI is typing...';
+      chat.appendChild(loadingBubble);
+      chat.scrollTop = chat.scrollHeight;
+
+      const response = await fetch('/.netlify/functions/chat', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify({ prompt: userMessage, history: conversation })
+      });
+
+      const data = await response.json();
+      loadingBubble.remove();
+
+      if (data.reply) {
+        conversation.push({ role: 'assistant', content: data.reply });
+        createMessageBubble('ai', data.reply);
+      } else {
+        createMessageBubble('ai', 'Something went wrong.');
+      }
+    });
+  </script>
+</body>
+</html>
